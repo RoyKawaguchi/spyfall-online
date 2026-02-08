@@ -6,60 +6,137 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-// Serve frontend files
 app.use(express.static("public"));
 
-// Store rooms + players in memory
 const rooms = {};
+// Each room contains:
+// - host ID
+// - arr of players
+// - boolean "started"
 
-// When a player connects
+/**
+ * Generates random room code (e.g., ABCD)
+ * @returns a random room code
+ */
+function generateRoomCode()
+{
+  return Math.random().toString(36).substring(2, 6).toUpperCase();
+}
+
 io.on("connection", (socket) =>
 {
-  console.log("A player connected! \nID: ", socket.id);
+  console.log("Player connected:", socket.id);
 
-  // Player joins a room
+  // CREATE ROOM (Host)
+  socket.on("createRoom", ({ name }) =>
+  {
+    const roomCode = generateRoomCode();
+
+    rooms[roomCode] =
+    {
+      hostId: socket.id,
+      players: [
+        {
+          id: socket.id,
+          name: name
+        }
+      ],
+      started: false
+    };
+
+    socket.join(roomCode);
+
+    // Send room info back to host only
+    socket.emit("roomCreated",
+    {
+      roomCode: roomCode,
+      isHost: true
+    });
+
+    // Update everyone in room (just host for now)
+    io.to(roomCode).emit("roomUpdate", rooms[roomCode]);
+  });
+
+  // JOIN ROOM (Normal player)
   socket.on("joinRoom", ({ name, roomCode }) =>
   {
-    console.log(`${name} is joining room ${roomCode}`);
+    const room = rooms[roomCode];
 
-    // Create new room if it doesn't exist
-    if (!rooms[roomCode])
+    if (!room)
     {
-      rooms[roomCode] = [];
+      socket.emit("errorMessage", "Room does not exist.");
+      return;
     }
 
-    // Add player to room
-    rooms[roomCode].push({
+    if (room.started)
+    {
+      socket.emit("errorMessage", "Game already started. Cannot join.");
+      return;
+    }
+
+    // Can join!
+
+    room.players.push({
       id: socket.id,
       name: name
     });
 
-    // Join Socket.IO room
     socket.join(roomCode);
 
-    // Send updated player list to everyone in room
-    io.to(roomCode).emit("roomUpdate", rooms[roomCode]);
+    socket.emit("joinedRoom",
+    {
+      roomCode: roomCode,
+      isHost: false
+    });
+
+    io.to(roomCode).emit("roomUpdate", room);
   });
 
-  // Handle disconnect
+  // HOST STARTS GAME
+  socket.on("startGame", ({ roomCode }) =>
+  {
+    const room = rooms[roomCode];
+
+    if (!room) return;
+
+    // Only host can start
+    if (socket.id !== room.hostId)
+    {
+      socket.emit("errorMessage", "Only the host can start the game.");
+      return;
+    }
+
+    room.started = true;
+
+    io.to(roomCode).emit("gameStarted");
+  });
+
+  // DISCONNECT CLEANUP
   socket.on("disconnect", () =>
   {
-    console.log("Player disconnected! \nID:", socket.id);
+    console.log("Player disconnected:", socket.id);
 
-    // Remove player from any room they were in
     for (let roomCode in rooms)
     {
-      rooms[roomCode] = rooms[roomCode].filter(
+      const room = rooms[roomCode];
+
+      room.players = room.players.filter(
         (player) => player.id !== socket.id
       );
 
-      // Update room player list
-      io.to(roomCode).emit("roomUpdate", rooms[roomCode]);
+      // If host leaves, delete room
+      if (room.hostId === socket.id)
+      {
+        io.to(roomCode).emit("errorMessage", "Host left. Room closed.");
+        delete rooms[roomCode];
+        return;
+      }
+
+      io.to(roomCode).emit("roomUpdate", room);
     }
   });
 });
 
-// Start server
 server.listen(3000, () =>
 {
   console.log("Server running at http://localhost:3000");
