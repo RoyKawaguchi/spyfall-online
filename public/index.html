@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Spyfall Online</title>
+</head>
+<body>
+  <h1>Spyfall Room Test</h1>
+
+  <h2>Join a Room</h2>
+
+  <input id="nameInput" placeholder="Your name" />
+  <input id="roomInput" placeholder="Room code (e.g. ABCD)" />
+  <button id="joinBtn">Join</button>
+
+  <h2>Players in Room:</h2>
+  <ul id="playerList"></ul>
+
+  <!-- Socket.IO client library -->
+  <script src="/socket.io/socket.io.js"></script>
+
+  <script>
+    const socket = io();
+
+    const joinBtn = document.getElementById("joinBtn");
+    const nameInput = document.getElementById("nameInput");
+    const roomInput = document.getElementById("roomInput");
+    const playerList = document.getElementById("playerList");
+
+    joinBtn.addEventListener("click", () =>
+    {
+      const name = nameInput.value;
+      const roomCode = roomInput.value;
+
+      socket.emit("joinRoom", { name, roomCode });
+    });
+
+    socket.on("roomUpdate", (players) =>
+    {
+      playerList.innerHTML = "";
+
+      players.forEach((player) =>
+      {
+        const li = document.createElement("li");
+        li.textContent = player.name;
+        playerList.appendChild(li);
+      });
+    });
+  </script>
+</body>
+</html>
