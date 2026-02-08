@@ -4,47 +4,54 @@
   <title>Spyfall Online</title>
 </head>
 <body>
-  <h1>Spyfall Room Test</h1>
+  <h1>Spyfall Online</h1>
 
-  <h2>Join a Room</h2>
+  <!-- ===================== -->
+  <!-- JOIN SCREEN -->
+  <!-- ===================== -->
+  <div id="joinScreen">
 
-  <input id="nameInput" placeholder="Your name" />
-  <input id="roomInput" placeholder="Room code (e.g. ABCD)" />
-  <button id="joinBtn">Join</button>
+    <h2>Enter Your Name</h2>
+    <input id="nameInput" placeholder="Your name" />
 
-  <h2>Players in Room:</h2>
-  <ul id="playerList"></ul>
+    <h2>Create or Join</h2>
 
-  <!-- Socket.IO client library -->
+    <button id="createBtn">Create Room (Host)</button>
+
+    <br><br>
+
+    <input id="roomInput" placeholder="Room code" />
+    <button id="joinBtn">Join Room</button>
+
+  </div>
+
+  <!-- ===================== -->
+  <!-- LOBBY SCREEN -->
+  <!-- ===================== -->
+  <div id="lobbyScreen" style="display:none;">
+
+    <h2>Lobby</h2>
+
+    <p>
+      <strong>Room Code:</strong>
+      <span id="roomCodeDisplay"></span>
+    </p>
+
+    <h3>Players</h3>
+    <ul id="playerList"></ul>
+
+    <button id="startBtn" style="display:none;">
+      Start Game (Host Only)
+    </button>
+
+    <p id="status"></p>
+
+  </div>
+
+  <!-- Socket.IO client -->
   <script src="/socket.io/socket.io.js"></script>
 
-  <script>
-    const socket = io();
-
-    const joinBtn = document.getElementById("joinBtn");
-    const nameInput = document.getElementById("nameInput");
-    const roomInput = document.getElementById("roomInput");
-    const playerList = document.getElementById("playerList");
-
-    joinBtn.addEventListener("click", () =>
-    {
-      const name = nameInput.value;
-      const roomCode = roomInput.value;
-
-      socket.emit("joinRoom", { name, roomCode });
-    });
-
-    socket.on("roomUpdate", (players) =>
-    {
-      playerList.innerHTML = "";
-
-      players.forEach((player) =>
-      {
-        const li = document.createElement("li");
-        li.textContent = player.name;
-        playerList.appendChild(li);
-      });
-    });
-  </script>
+  <!-- Front end code -->
+  <script src="main.js"></script>
 </body>
 </html>
