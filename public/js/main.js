@@ -7,19 +7,17 @@ let isHost = false;
 // Screens
 const joinScreen = document.getElementById("joinScreen");
 const lobbyScreen = document.getElementById("lobbyScreen");
-const roleScreen = document.getElementById("roleScreen");
+const gameScreen = document.getElementById("gameScreen");
 
 // Switch screens
-function showLobby()
-{
+function showLobby() {
   joinScreen.style.display = "none";
   lobbyScreen.style.display = "block";
-  roleScreen.style.display = "none";
+  gameScreen.style.display = "none";
 }
 
-function showRole()
-{
+function showGame() {
   joinScreen.style.display = "none";
   lobbyScreen.style.display = "none";
-  roleScreen.style.display = "block";
+  gameScreen.style.display = "block";
 }
