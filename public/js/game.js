@@ -14,7 +14,7 @@ socket.on("yourCard", (card) =>
     else
     {
         roleText.textContent =
-            `Location: ${card.location}\nRole: ${card.role}`;
+            `Location: ${card.location}\n\nRole: ${card.role}`;
     }
 });
 

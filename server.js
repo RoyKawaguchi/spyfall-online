@@ -13,9 +13,9 @@ app.use(express.static("public"));
 const rooms = {};
 
 const locations = [
-  { name: "Airport", roles: ["Pilot", "Security", "Passenger", "Mechanic"] },
-  { name: "Hospital", roles: ["Doctor", "Nurse", "Patient", "Surgeon"] },
-  { name: "Casino", roles: ["Dealer", "Gambler", "Security", "Bartender"] }
+  { name: "Airport", roles: ["Pilot", "Security", "Passenger", "Mechanic", "Flight Attendant", "Customs Officer"] },
+  { name: "Hospital", roles: ["Doctor", "Nurse", "Patient", "Surgeon", "Receptionist", "Paramedic"] },
+  { name: "Casino", roles: ["Dealer", "Gambler", "Security", "Bartender", "Pit Boss", "Waitress"] }
 ];
 
 /**
@@ -44,6 +44,7 @@ io.on("connection", (socket) => {
   });
 
   // EVENT: Join Room (Guest)
+  // BUG FIX: Added the missing "joinedRoom" emission
   socket.on("joinRoom", ({ name, roomCode }) => {
     const room = rooms[roomCode];
     if (!room) {
@@ -55,12 +56,18 @@ io.on("connection", (socket) => {
 
     room.players.push({ id: socket.id, name });
     socket.join(roomCode);
+    
+    socket.emit("joinedRoom", { roomCode });
+    
+    // Update all players in the room
     io.to(roomCode).emit("roomUpdate", room);
   });
 
   // EVENT: Start Game (Host only)
   socket.on("startGame", ({ roomCode }) => {
     const room = rooms[roomCode];
+
+    //Only host can start
     if (!room || socket.id !== room.hostId) return;
 
     room.started = true;
@@ -68,7 +75,13 @@ io.on("connection", (socket) => {
     // 1. Pick Random Location & Spy
     const chosenLocation = locations[Math.floor(Math.random() * locations.length)];
     const spyIndex = Math.floor(Math.random() * room.players.length);
-    const shuffledRoles = [...chosenLocation.roles].sort(() => Math.random() - 0.5);
+    
+    // If there are more players than roles, add "Visitor" roles
+    let rolePool = [...chosenLocation.roles];
+    while (rolePool.length < room.players.length) {
+      rolePool.push("Visitor");
+    }
+    const shuffledRoles = rolePool.sort(() => Math.random() - 0.5);
 
     // 2. Assign Cards Privately
     room.players.forEach((player, index) => {
@@ -90,10 +103,18 @@ io.on("connection", (socket) => {
       const room = rooms[roomCode];
       room.players = room.players.filter(p => p.id !== socket.id);
 
-      if (room.hostId === socket.id) {
+      if (room.hostId === socket.id)  // Host left
+      {
         io.to(roomCode).emit("errorMessage", "Host left. Room closed.");
         delete rooms[roomCode];
-      } else {
+      } 
+      else if (room.players.length === 0) // Room is now empty
+      {
+        // Clean up empty rooms
+        delete rooms[roomCode];
+      } 
+      else  // Normal player leaving
+      {
         io.to(roomCode).emit("roomUpdate", room);
       }
     }
