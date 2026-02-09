@@ -6,138 +6,100 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
+// Serve static files from the 'public' folder
 app.use(express.static("public"));
 
+// Global State: Storing rooms in RAM
 const rooms = {};
-// Each room contains:
-// - host ID
-// - arr of players
-// - boolean "started"
+
+const locations = [
+  { name: "Airport", roles: ["Pilot", "Security", "Passenger", "Mechanic"] },
+  { name: "Hospital", roles: ["Doctor", "Nurse", "Patient", "Surgeon"] },
+  { name: "Casino", roles: ["Dealer", "Gambler", "Security", "Bartender"] }
+];
 
 /**
- * Generates random room code (e.g., ABCD)
- * @returns a random room code
+ * HELPER: Generates a 4-character room code
  */
-function generateRoomCode()
-{
+function generateRoomCode() {
   return Math.random().toString(36).substring(2, 6).toUpperCase();
 }
 
-io.on("connection", (socket) =>
-{
+io.on("connection", (socket) => {
   console.log("Player connected:", socket.id);
 
-  // CREATE ROOM (Host)
-  socket.on("createRoom", ({ name }) =>
-  {
+  // EVENT 1: Create Room (Host)
+  socket.on("createRoom", ({ name }) => {
     const roomCode = generateRoomCode();
-
-    rooms[roomCode] =
-    {
+    
+    rooms[roomCode] = {
       hostId: socket.id,
-      players: [
-        {
-          id: socket.id,
-          name: name
-        }
-      ],
+      players: [{ id: socket.id, name: name }],
       started: false
     };
 
     socket.join(roomCode);
-
-    // Send room info back to host only
-    socket.emit("roomCreated",
-    {
-      roomCode: roomCode,
-      isHost: true
-    });
-
-    // Update everyone in room (just host for now)
+    socket.emit("roomCreated", { roomCode, isHost: true });
     io.to(roomCode).emit("roomUpdate", rooms[roomCode]);
   });
 
-  // JOIN ROOM (Normal player)
-  socket.on("joinRoom", ({ name, roomCode }) =>
-  {
+  // EVENT: Join Room (Guest)
+  socket.on("joinRoom", ({ name, roomCode }) => {
     const room = rooms[roomCode];
-
-    if (!room)
-    {
-      socket.emit("errorMessage", "Room does not exist.");
-      return;
+    if (!room) {
+      return socket.emit("errorMessage", "Room not found.");
+    }
+    if (room.started) {
+      return socket.emit("errorMessage", "Game already in progress.");
     }
 
-    if (room.started)
-    {
-      socket.emit("errorMessage", "Game already started. Cannot join.");
-      return;
-    }
-
-    // Can join!
-
-    room.players.push({
-      id: socket.id,
-      name: name
-    });
-
+    room.players.push({ id: socket.id, name });
     socket.join(roomCode);
-
-    socket.emit("joinedRoom",
-    {
-      roomCode: roomCode,
-      isHost: false
-    });
-
     io.to(roomCode).emit("roomUpdate", room);
   });
 
-  // HOST STARTS GAME
-  socket.on("startGame", ({ roomCode }) =>
-  {
+  // EVENT: Start Game (Host only)
+  socket.on("startGame", ({ roomCode }) => {
     const room = rooms[roomCode];
-
-    if (!room) return;
-
-    // Only host can start
-    if (socket.id !== room.hostId)
-    {
-      socket.emit("errorMessage", "Only the host can start the game.");
-      return;
-    }
+    if (!room || socket.id !== room.hostId) return;
 
     room.started = true;
 
+    // 1. Pick Random Location & Spy
+    const chosenLocation = locations[Math.floor(Math.random() * locations.length)];
+    const spyIndex = Math.floor(Math.random() * room.players.length);
+    const shuffledRoles = [...chosenLocation.roles].sort(() => Math.random() - 0.5);
+
+    // 2. Assign Cards Privately
+    room.players.forEach((player, index) => {
+      const isSpy = index === spyIndex;
+      const cardData = isSpy 
+        ? { isSpy: true } 
+        : { isSpy: false, location: chosenLocation.name, role: shuffledRoles.pop() || "Visitor" };
+      
+      io.to(player.id).emit("yourCard", cardData);
+    });
+
+    // 3. Notify everyone game is on
     io.to(roomCode).emit("gameStarted");
   });
 
-  // DISCONNECT CLEANUP
-  socket.on("disconnect", () =>
-  {
-    console.log("Player disconnected:", socket.id);
-
-    for (let roomCode in rooms)
-    {
+  // EVENT: Disconnect
+  socket.on("disconnect", () => {
+    for (const roomCode in rooms) {
       const room = rooms[roomCode];
+      room.players = room.players.filter(p => p.id !== socket.id);
 
-      room.players = room.players.filter(
-        (player) => player.id !== socket.id
-      );
-
-      // If host leaves, delete room
-      if (room.hostId === socket.id)
-      {
+      if (room.hostId === socket.id) {
         io.to(roomCode).emit("errorMessage", "Host left. Room closed.");
         delete rooms[roomCode];
-        return;
+      } else {
+        io.to(roomCode).emit("roomUpdate", room);
       }
-
-      io.to(roomCode).emit("roomUpdate", room);
     }
   });
 });
 
-server.listen(3000, () =>
-{
-  console.log("Server running at http://localhost:3000");
+server.listen(3000, () => {
+  console.log("Spyfall Server running at http://localhost:3000");
 });
