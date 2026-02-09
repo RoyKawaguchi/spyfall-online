@@ -12,6 +12,22 @@
       color: #e0e0e0;
     }
 
+    .main-header {
+    position: relative;
+    margin-bottom: 40px; /* Space between title and the join screen */
+  }
+
+  .author-tag {
+    text-align: right;
+    font-style: italic;
+    font-size: 0.85em;
+    color: #888; /* Subtle grey */
+    margin-top: -10px; /* Pull it closer to the title */
+    padding-right: 10px;
+    letter-spacing: 1px;
+    text-transform: lowercase; /* Very chic/modern look */
+  }
+
     h1 {
       text-align: center;
       color: #bb86fc;
@@ -151,7 +167,10 @@
 </style>
 </head>
 <body>
-  <h1>🕵️ Spyfall Online 🕵️</h1>
+  <header class="main-header">
+    <h1>🕵️ Spyfall Online 🕵️</h1>
+    <div class="author-tag">by Roy Kawaguchi</div>
+  </header>
 
   <!-- ===================== -->
   <!-- JOIN SCREEN -->
