@@ -19,9 +19,9 @@ socket.on("yourCard", (card) => {
     roleText.style.color = "#ff4444";
     roleText.style.fontWeight = "bold";
   } else {
-    roleText.textContent = `Location: ${card.location}\nRole: ${card.role}`;
+    roleText.textContent = `Location: "${card.location}",  Role: "${card.role}"`;
     roleText.style.color = "#333";
-    roleText.style.fontWeight = "normal";
+    roleText.style.fontWeight = "bold";
   }
 });
 
@@ -99,8 +99,12 @@ revealBtn.addEventListener("click", () => {
 socket.on("gameRevealed", ({ spyName, location }) => {
   revealSection.style.display = "block";
   revealText.innerHTML = `
-    <strong style="color: #ff4444;">The spy was: ${spyName}</strong><br>
-    <strong style="color: #2196F3;">The location was: ${location}</strong>
+    <div style="margin-bottom: 20px;">
+      <strong style="color: #ff4d4d;">The SPY was ${spyName}!</strong>
+    </div>
+    <div>
+      <strong style="color: #03dac6;">Location: "${location}"</strong>
+    </div>
   `;
   
   // Hide reveal button, show restart button (host only)

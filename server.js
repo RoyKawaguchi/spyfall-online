@@ -13,14 +13,26 @@ app.use(express.static("public"));
 const rooms = {};
 
 const locations = [
-  { name: "Airport", roles: ["Pilot", "Security", "Passenger", "Mechanic", "Flight Attendant", "Customs Officer"] },
+  { name: "Airport", roles: ["Pilot", "Security Guard", "Passenger", "Mechanic", "Flight Attendant", "Customs Officer"] },
   { name: "Hospital", roles: ["Doctor", "Nurse", "Patient", "Surgeon", "Receptionist", "Paramedic"] },
-  { name: "Casino", roles: ["Dealer", "Gambler", "Security", "Bartender", "Pit Boss", "Waitress"] },
-  { name: "Beach", roles: ["Lifeguard", "Surfer", "Vendor", "Tourist", "Photographer", "Sunbather"] },
-  { name: "Restaurant", roles: ["Chef", "Waiter", "Customer", "Host", "Dishwasher", "Sommelier"] },
-  { name: "School", roles: ["Teacher", "Student", "Principal", "Janitor", "Librarian", "Counselor"] },
-  { name: "Theater", roles: ["Actor", "Director", "Audience Member", "Stagehand", "Usher", "Ticket Seller"] },
-  { name: "Bank", roles: ["Teller", "Manager", "Customer", "Security Guard", "Accountant", "Loan Officer"] }
+  { name: "Casino", roles: ["Dealer", "Gambler", "Security Guard", "Bartender", "Pit Boss", "Waitress"] },
+  { name: "Beach", roles: ["Lifeguard", "Surfer", "Ice Cream Vendor", "Tourist", "Photographer", "Sunbather"] },
+  { name: "Restaurant", roles: ["Chef", "Waiter", "Customer", "Host", "Dishwasher", "Food Critic"] },
+  { name: "School", roles: ["Teacher", "Student", "Principal", "Janitor", "Librarian", "Gym Coach"] },
+  { name: "Theater", roles: ["Actor", "Director", "Audience Member", "Stagehand", "Usher", "Makeup Artist"] },
+  { name: "Bank", roles: ["Teller", "Manager", "Customer", "Security Guard", "Armored Car Driver", "Loan Officer"] },
+  { name: "Space Station", roles: ["Astronaut", "Scientist", "Commander", "Engineer", "Space Tourist", "Alien Hunter"] },
+  { name: "Submarine", roles: ["Captain", "Sonar Operator", "Cook", "Engineer", "Radio Operator", "Navigator"] },
+  { name: "Hotel", roles: ["Concierge", "Bellhop", "Guest", "Housekeeper", "Manager", "Valet"] },
+  { name: "Police Station", roles: ["Detective", "Patrol Officer", "Criminal", "Lawyer", "Police Chief", "Dispatcher"] },
+  { name: "Supermarket", roles: ["Cashier", "Customer", "Stock Clerk", "Butcher", "Manager", "Security Guard"] },
+  { name: "Movie Studio", roles: ["Director", "Actor", "Cameraman", "Stuntman", "Producer", "Screenwriter"] },
+  { name: "Corporate Party", roles: ["CEO", "Secretary", "Accountant", "Delivery Person", "IT Guy", "Intern"] },
+  { name: "Crusader Army", roles: ["Knight", "Squire", "Archer", "Monk", "Prisoner", "Blacksmith"] },
+  { name: "Pirate Ship", roles: ["Captain", "Cabin Boy", "First Mate", "Cannoneer", "Sailor", "Cook"] },
+  { name: "Polar Station", roles: ["Researcher", "Meteorologist", "Geologist", "Expedition Leader", "Mechanic", "Doctor"] },
+  { name: "Military Base", roles: ["Soldier", "Officer", "Medic", "Sniper", "Colonel", "Tank Driver"] },
+  { name: "Embassy", roles: ["Ambassador", "Diplomat", "Secretary", "Security Guard", "Tourist", "Spy Hunter"] }
 ];
 
 // Get all location names for the reference list
@@ -66,6 +78,23 @@ function stopTimer(roomCode) {
   }
 }
 
+/**
+ * HELPER: Returns a version of the room object safe to send over Socket.IO
+ * (Removes the circular timerInterval object that causes crashes)
+ */
+function getCleanRoomData(roomCode) {
+  const room = rooms[roomCode];
+  if (!room) return null;
+  return {
+    hostId: room.hostId,
+    players: room.players,
+    started: room.started,
+    timeLeft: room.timeLeft,
+    location: room.location
+    // timerInterval is NOT included here
+  };
+}
+
 io.on("connection", (socket) => {
   console.log("Player connected:", socket.id);
 
@@ -85,7 +114,7 @@ io.on("connection", (socket) => {
 
     socket.join(roomCode);
     socket.emit("roomCreated", { roomCode, isHost: true });
-    io.to(roomCode).emit("roomUpdate", rooms[roomCode]);
+    io.to(roomCode).emit("roomUpdate", getCleanRoomData(roomCode));
   });
 
   // EVENT: Join Room (Guest)
@@ -102,7 +131,7 @@ io.on("connection", (socket) => {
     socket.join(roomCode);
     
     socket.emit("joinedRoom", { roomCode });
-    io.to(roomCode).emit("roomUpdate", room);
+    io.to(roomCode).emit("roomUpdate", getCleanRoomData(roomCode))
   });
 
   // EVENT: Start Game (Host only)
@@ -184,7 +213,7 @@ io.on("connection", (socket) => {
 
     // Tell everyone to go back to lobby
     io.to(roomCode).emit("gameRestarted");
-    io.to(roomCode).emit("roomUpdate", room);
+    io.to(roomCode).emit("roomUpdate", getCleanRoomData(roomCode));
   });
 
   // EVENT: Disconnect
@@ -203,7 +232,7 @@ io.on("connection", (socket) => {
         stopTimer(roomCode);
         delete rooms[roomCode];
       } else {
-        io.to(roomCode).emit("roomUpdate", room);
+        io.to(roomCode).emit("roomUpdate", getCleanRoomData(roomCode));
       }
     }
   });
