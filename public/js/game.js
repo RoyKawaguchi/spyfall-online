@@ -100,10 +100,10 @@ socket.on("gameRevealed", ({ spyName, location }) => {
   revealSection.style.display = "block";
   revealText.innerHTML = `
     <div style="margin-bottom: 20px;">
-      <strong style="color: #ff4d4d;">The SPY was ${spyName}!</strong>
+      <strong style="color: #ff4d4d;">• The SPY was ${spyName}!</strong>
     </div>
     <div>
-      <strong style="color: #03dac6;">Location: "${location}"</strong>
+      <strong style="color: #03dac6;">• Location: "${location}"</strong>
     </div>
   `;
   
